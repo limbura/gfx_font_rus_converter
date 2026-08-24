@@ -39,7 +39,9 @@ FontNameOutput.h - опциональный параметр.
 # Как пользоваться
 
 В скетче Arduino нужно подключить созданный файл шрифта:
-`#include <AdafruitGFXFontsRus\Marske20Rus.h>`
+```
+#include <AdafruitGFXFontsRus\Marske20Rus.h>
+```
 
 Перед использованием шрифта задать его:
 ```
