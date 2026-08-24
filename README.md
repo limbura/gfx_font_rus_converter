@@ -19,7 +19,8 @@ __Обязательно задать "набор символов: кирилл
 
 ### 3. Положить полученный файл шрифта исходника в одну папку со скриптом gfx_font_rus_converter.py
 
-### 4. Скачать и установить python если его нет: 
+### 4. Скачать и установить python если его нет
+
 https://www.python.org/ftp/python/pymanager/python-manager-26.3.msix
 
 ### 5. Открыть командную строку (cmd / power shell).
@@ -27,8 +28,9 @@ https://www.python.org/ftp/python/pymanager/python-manager-26.3.msix
 ### 6. Перейти в папку где лежит скрипт и шрифт с помощью команды:
 `cd`
 
-### 7. Запустить скрипт: 
+### 7. Запустить скрипт
 `python gfx_rus_converter.py FontName.h [FontNameOutput.h]`
+
 FontOutput - опциональный параметр.
 
 ### 8. Конвертер создаст FontNameRus.h (либо указанное имя).
