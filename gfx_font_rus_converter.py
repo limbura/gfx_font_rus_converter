@@ -4,11 +4,60 @@ from pathlib import Path
 
 
 # ============================================================
-# CP1251 -> специальная раскладка AdafruitGFXRusFonts
+# Настройки
+# ============================================================
+
+NEW_FIRST = 0x20
+NEW_LAST  = 0xBF
+
+
+# ============================================================
+# Соответствие:
+#
+# НОВАЯ ПОЗИЦИЯ -> СТАРАЯ ПОЗИЦИЯ
+#
+# Исходный шрифт содержит кириллицу в CP1251:
+#
+# C0-DF = А-Я
+# E0-FF = а-я
+#
+# Новая позиция соответствует второму байту UTF-8:
+#
+# D0 90-D0 AF = А-Я
+# D0 B0-D0 BF = а-п
+# D1 80-D1 8F = р-я
 # ============================================================
 
 RUSSIAN_MAPPING = {
-    # Заглавные А-Я
+
+    # --------------------------------------------------------
+    # Р - Я
+    # UTF-8: D1 80 ... D1 8F
+    # --------------------------------------------------------
+
+    0x80: 0xF0,  # р
+    0x81: 0xF1,  # с
+    0x82: 0xF2,  # т
+    0x83: 0xF3,  # у
+    0x84: 0xF4,  # ф
+    0x85: 0xF5,  # х
+    0x86: 0xF6,  # ц
+    0x87: 0xF7,  # ч
+    0x88: 0xF8,  # ш
+    0x89: 0xF9,  # щ
+    0x8A: 0xFA,  # ъ
+    0x8B: 0xFB,  # ы
+    0x8C: 0xFC,  # ь
+    0x8D: 0xFD,  # э
+    0x8E: 0xFE,  # ю
+    0x8F: 0xFF,  # я
+
+
+    # --------------------------------------------------------
+    # А - Я
+    # UTF-8: D0 90 ... D0 AF
+    # --------------------------------------------------------
+
     0x90: 0xC0,  # А
     0x91: 0xC1,  # Б
     0x92: 0xC2,  # В
@@ -42,7 +91,12 @@ RUSSIAN_MAPPING = {
     0xAE: 0xDE,  # Ю
     0xAF: 0xDF,  # Я
 
-    # Строчные а-п
+
+    # --------------------------------------------------------
+    # а - п
+    # UTF-8: D0 B0 ... D0 BF
+    # --------------------------------------------------------
+
     0xB0: 0xE0,  # а
     0xB1: 0xE1,  # б
     0xB2: 0xE2,  # в
@@ -59,29 +113,11 @@ RUSSIAN_MAPPING = {
     0xBD: 0xED,  # н
     0xBE: 0xEE,  # о
     0xBF: 0xEF,  # п
-
-    # Строчные р-я
-    0x80: 0xF0,  # р
-    0x81: 0xF1,  # с
-    0x82: 0xF2,  # т
-    0x83: 0xF3,  # у
-    0x84: 0xF4,  # ф
-    0x85: 0xF5,  # х
-    0x86: 0xF6,  # ц
-    0x87: 0xF7,  # ч
-    0x88: 0xF8,  # ш
-    0x89: 0xF9,  # щ
-    0x8A: 0xFA,  # ъ
-    0x8B: 0xFB,  # ы
-    0x8C: 0xFC,  # ь
-    0x8D: 0xFD,  # э
-    0x8E: 0xFE,  # ю
-    0x8F: 0xFF,  # я
 }
 
 
 # ============================================================
-# Поиск массива GFXglyph
+# Найти массив GFXglyph
 # ============================================================
 
 def find_glyph_array(text):
@@ -97,19 +133,14 @@ def find_glyph_array(text):
 
     if not match:
         raise RuntimeError(
-            "Не удалось найти массив GFXglyph[]"
+            "Не удалось найти массив GFXglyph[]."
         )
 
     return match
 
 
 # ============================================================
-# Разбор отдельных записей GFXglyph
-#
-# Формат:
-#
-# { bitmapOffset, width, height, xAdvance, xOffset, yOffset }
-#
+# Разобрать GFXglyph[]
 # ============================================================
 
 def parse_glyphs(body):
@@ -120,15 +151,13 @@ def parse_glyphs(body):
         r'\s*\}'
     )
 
-    matches = list(pattern.finditer(body))
-
     glyphs = []
 
-    for match in matches:
+    for match in pattern.finditer(body):
 
         content = match.group(1)
 
-        # Убираем комментарии
+        # Удаляем комментарии
         content = re.sub(
             r'//.*',
             '',
@@ -152,20 +181,18 @@ def parse_glyphs(body):
 
 
 # ============================================================
-# Поиск GFXfont
+# Найти first/last в GFXfont
 # ============================================================
 
-def modify_gfxfont(text, first, last):
+def find_font_range(text):
 
     pattern = re.compile(
-        r'(\{\s*'
-        r'\(uint8_t\s*\*\)\w+\s*,'
-        r'\s*\(GFXglyph\s*\*\)\w+\s*,'
-        r'\s*)'
+        r'const\s+GFXfont\s+\w+'
+        r'.*?\{.*?'
         r'(0x[0-9A-Fa-f]+|\d+)'
-        r'(\s*,\s*)'
+        r'\s*,\s*'
         r'(0x[0-9A-Fa-f]+|\d+)'
-        r'(\s*,)',
+        r'\s*,',
         re.DOTALL
     )
 
@@ -173,17 +200,27 @@ def modify_gfxfont(text, first, last):
 
     if not match:
         raise RuntimeError(
-            "Не удалось найти структуру GFXfont"
+            "Не удалось найти структуру GFXfont."
         )
 
+    first = int(match.group(1), 0)
+    last  = int(match.group(2), 0)
+
+    return match, first, last
+
+
+# ============================================================
+# Изменить first / last
+# ============================================================
+
+def modify_font_range(text, match):
+
     new_text = (
-        text[:match.start()]
-        + match.group(1)
-        + f"0x{first:02X}"
-        + match.group(3)
-        + f"0x{last:02X}"
-        + match.group(5)
-        + text[match.end():]
+        text[:match.start(1)]
+        + f"0x{NEW_FIRST:02X}"
+        + text[match.end(1):match.start(2)]
+        + f"0x{NEW_LAST:02X}"
+        + text[match.end(2):]
     )
 
     return new_text
@@ -205,61 +242,42 @@ def convert(input_file, output_file):
     print(f"Output: {output_path}")
     print()
 
+    # --------------------------------------------------------
+    # Читаем файл как Latin-1.
+    #
+    # Это позволяет безопасно работать с .h, в котором
+    # конвертер записал байты 0x80-0xFF непосредственно
+    # в комментарии.
+    # --------------------------------------------------------
+
     text = input_path.read_text(
         encoding="latin-1"
     )
 
     # --------------------------------------------------------
-    # Ищем GFXglyph[]
+    # Находим GFXglyph[]
     # --------------------------------------------------------
 
-    match = find_glyph_array(text)
+    glyph_match = find_glyph_array(text)
 
-    body_start = match.start(3)
-    body_end = match.end(3)
+    glyph_body = glyph_match.group(3)
 
-    glyph_body = match.group(3)
+    old_glyphs = parse_glyphs(glyph_body)
 
-    glyphs = parse_glyphs(glyph_body)
-
-    if not glyphs:
+    if not old_glyphs:
         raise RuntimeError(
-            "Не удалось разобрать GFXglyph[]"
+            "Не удалось разобрать GFXglyph[]."
         )
 
-    print(f"Найдено glyph'ов: {len(glyphs)}")
+    print(
+        f"Найдено glyph'ов: {len(old_glyphs)}"
+    )
 
     # --------------------------------------------------------
-    # Определяем first.
-    #
-    # Обычно это 0x20.
+    # Определяем first/last исходного шрифта
     # --------------------------------------------------------
 
-    font_pattern = re.compile(
-        r'const\s+GFXfont\s+\w+'
-        r'.*?\{.*?'
-        r'0x([0-9A-Fa-f]+)'
-        r'\s*,'
-        r'\s*0x([0-9A-Fa-f]+)',
-        re.DOTALL
-    )
-
-    font_match = font_pattern.search(text)
-
-    if not font_match:
-        raise RuntimeError(
-            "Не удалось определить first/last GFXfont"
-        )
-
-    old_first = int(
-        font_match.group(1),
-        16
-    )
-
-    old_last = int(
-        font_match.group(2),
-        16
-    )
+    font_match, old_first, old_last = find_font_range(text)
 
     print(
         f"Исходный диапазон: "
@@ -267,63 +285,84 @@ def convert(input_file, output_file):
     )
 
     # --------------------------------------------------------
-    # Проверяем, что в массиве вообще есть CP1251 C0-FF
+    # Проверяем, что исходный шрифт содержит все нужные
+    # исходные glyph'ы.
     # --------------------------------------------------------
 
-    def index_for_code(code):
-        return code - old_first
+    def old_index(code):
 
-    required_codes = list(
-        RUSSIAN_MAPPING.values()
-    )
+        index = code - old_first
 
-    for code in required_codes:
-
-        index = index_for_code(code)
-
-        if index < 0 or index >= len(glyphs):
+        if index < 0 or index >= len(old_glyphs):
 
             raise RuntimeError(
-                f"В шрифте отсутствует glyph "
-                f"0x{code:02X}. "
-                f"Найден диапазон "
-                f"0x{old_first:02X}-"
-                f"0x{old_last:02X}."
+                f"В исходном шрифте отсутствует "
+                f"glyph 0x{code:02X}."
+            )
+
+        return index
+
+    # --------------------------------------------------------
+    # Создаём НОВЫЙ массив только 0x20...0xBF.
+    #
+    # Это принципиально:
+    #
+    # всё после 0xBF физически исчезнет из файла.
+    # --------------------------------------------------------
+
+    new_glyphs = []
+
+    for code in range(NEW_FIRST, NEW_LAST + 1):
+
+        # Обычные символы ASCII и прочее,
+        # которые уже находились на тех же позициях.
+
+        if code not in RUSSIAN_MAPPING:
+
+            index = old_index(code)
+
+            new_glyphs.append(
+                old_glyphs[index]
+            )
+
+        else:
+
+            # Русская буква:
+            # берём glyph из старой CP1251-позиции.
+
+            source_code = RUSSIAN_MAPPING[code]
+
+            index = old_index(source_code)
+
+            new_glyphs.append(
+                old_glyphs[index]
             )
 
     # --------------------------------------------------------
-    # Создаём копию массива
+    # Проверяем количество
     # --------------------------------------------------------
 
-    new_glyphs = glyphs.copy()
+    expected_count = NEW_LAST - NEW_FIRST + 1
 
-    # --------------------------------------------------------
-    # Переставляем русские glyph'ы
-    #
-    # destination = source
-    #
-    # Например:
-    #
-    # new[0x90] = old[0xC0]
-    #
-    # --------------------------------------------------------
+    if len(new_glyphs) != expected_count:
 
-    for destination, source in RUSSIAN_MAPPING.items():
-
-        destination_index = index_for_code(
-            destination
+        raise RuntimeError(
+            f"Ошибка формирования массива: "
+            f"получено {len(new_glyphs)}, "
+            f"ожидалось {expected_count}."
         )
 
-        source_index = index_for_code(
-            source
-        )
+    print(
+        f"Новый диапазон: "
+        f"0x{NEW_FIRST:02X} - 0x{NEW_LAST:02X}"
+    )
 
-        new_glyphs[destination_index] = (
-            glyphs[source_index]
-        )
+    print(
+        f"Новых glyph'ов: {len(new_glyphs)}"
+    )
 
     # --------------------------------------------------------
-    # Формируем новый массив
+    # Формируем новый GFXglyph[]
     # --------------------------------------------------------
 
     new_body = "\n"
@@ -331,12 +370,19 @@ def convert(input_file, output_file):
     for glyph in new_glyphs:
 
         new_body += (
-            "  "
+            "    "
             + glyph
             + ",\n"
         )
 
     new_body += " "
+
+    # --------------------------------------------------------
+    # Заменяем старый массив новым
+    # --------------------------------------------------------
+
+    body_start = glyph_match.start(3)
+    body_end   = glyph_match.end(3)
 
     new_text = (
         text[:body_start]
@@ -345,19 +391,21 @@ def convert(input_file, output_file):
     )
 
     # --------------------------------------------------------
-    # Меняем диапазон GFXfont
-    #
-    # Он должен включать 0x20...0xBF
+    # Меняем first/last
     # --------------------------------------------------------
 
-    new_text = modify_gfxfont(
+    # После замены массива позиции в тексте могли измениться,
+    # поэтому ищем GFXfont заново.
+
+    font_match, _, _ = find_font_range(new_text)
+
+    new_text = modify_font_range(
         new_text,
-        old_first,
-        0xBF
+        font_match
     )
 
     # --------------------------------------------------------
-    # Сохраняем
+    # Сохраняем UTF-8
     # --------------------------------------------------------
 
     output_path.write_text(
@@ -365,58 +413,61 @@ def convert(input_file, output_file):
         encoding="utf-8"
     )
 
+    # --------------------------------------------------------
+    # Информация
+    # --------------------------------------------------------
+
     print()
     print("Готово!")
     print()
     print(
-        "Русская раскладка установлена:"
+        "Кириллица размещена по второму байту UTF-8:"
     )
-
-    for destination, source in RUSSIAN_MAPPING.items():
-
-        print(
-            f"  0x{source:02X} -> "
-            f"0x{destination:02X}"
-        )
-
+    print(
+        "  0x80-0x8F -> р-я"
+    )
+    print(
+        "  0x90-0xAF -> А-Я"
+    )
+    print(
+        "  0xB0-0xBF -> а-п"
+    )
     print()
+    print(
+        "Glyph'ы после 0xBF удалены."
+    )
     print(
         "Bitmap'ы не изменялись."
     )
     print(
-        "GFXglyph bitmapOffset не изменялись."
+        "bitmapOffset каждого glyph'а сохранён."
     )
     print()
 
 
 # ============================================================
-# Точка входа
+# Запуск
 # ============================================================
 
 def main():
 
     if len(sys.argv) < 2:
 
+        print()
         print(
             "Использование:"
         )
-
         print(
-            "  python gfx_rus_converter.py "
-            "input.h [output.h]"
+            "  python gfx_rus_converter.py input.h"
         )
-
         print()
-
         print(
-            "Например:"
+            "Или:"
         )
-
         print(
-            "  python gfx_rus_converter.py "
-            "BahnschriftLight18.h "
-            "BahnschriftLight18Rus.h"
+            "  python gfx_rus_converter.py input.h output.h"
         )
+        print()
 
         return
 
