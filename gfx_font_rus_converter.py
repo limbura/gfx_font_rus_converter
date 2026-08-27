@@ -4,250 +4,584 @@ from pathlib import Path
 
 
 # ============================================================
-# Настройки
+# НАСТРОЙКИ
 # ============================================================
 
-NEW_FIRST = 0x20
-NEW_LAST  = 0xBF
+FIRST_CHAR = 0x20
+LAST_CHAR = 0xBF
 
 
 # ============================================================
-# Соответствие:
+# КИРИЛЛИЦА
 #
-# НОВАЯ ПОЗИЦИЯ -> СТАРАЯ ПОЗИЦИЯ
+# Формат:
 #
-# Исходный шрифт содержит кириллицу в CP1251:
+#   НОВЫЙ КОД -> ИСХОДНЫЙ КОД
 #
-# C0-DF = А-Я
-# E0-FF = а-я
+# То есть:
 #
-# Новая позиция соответствует второму байту UTF-8:
+#   0x80 <- 0xF0   р
+#   ...
+#   0x8F <- 0xFF   я
 #
-# D0 90-D0 AF = А-Я
-# D0 B0-D0 BF = а-п
-# D1 80-D1 8F = р-я
+#   0x90 <- 0xC0   А
+#   ...
+#   0xBF <- 0xEF   п
 # ============================================================
 
 RUSSIAN_MAPPING = {
 
-    # --------------------------------------------------------
-    # Р - Я
-    # UTF-8: D1 80 ... D1 8F
-    # --------------------------------------------------------
+    # р-я
+    0x80: 0xF0,
+    0x81: 0xF1,
+    0x82: 0xF2,
+    0x83: 0xF3,
+    0x84: 0xF4,
+    0x85: 0xF5,
+    0x86: 0xF6,
+    0x87: 0xF7,
+    0x88: 0xF8,
+    0x89: 0xF9,
+    0x8A: 0xFA,
+    0x8B: 0xFB,
+    0x8C: 0xFC,
+    0x8D: 0xFD,
+    0x8E: 0xFE,
+    0x8F: 0xFF,
 
-    0x80: 0xF0,  # р
-    0x81: 0xF1,  # с
-    0x82: 0xF2,  # т
-    0x83: 0xF3,  # у
-    0x84: 0xF4,  # ф
-    0x85: 0xF5,  # х
-    0x86: 0xF6,  # ц
-    0x87: 0xF7,  # ч
-    0x88: 0xF8,  # ш
-    0x89: 0xF9,  # щ
-    0x8A: 0xFA,  # ъ
-    0x8B: 0xFB,  # ы
-    0x8C: 0xFC,  # ь
-    0x8D: 0xFD,  # э
-    0x8E: 0xFE,  # ю
-    0x8F: 0xFF,  # я
+    # А-Я
+    0x90: 0xC0,
+    0x91: 0xC1,
+    0x92: 0xC2,
+    0x93: 0xC3,
+    0x94: 0xC4,
+    0x95: 0xC5,
+    0x96: 0xC6,
+    0x97: 0xC7,
+    0x98: 0xC8,
+    0x99: 0xC9,
+    0x9A: 0xCA,
+    0x9B: 0xCB,
+    0x9C: 0xCC,
+    0x9D: 0xCD,
+    0x9E: 0xCE,
+    0x9F: 0xCF,
+    0xA0: 0xD0,
+    0xA1: 0xD1,
+    0xA2: 0xD2,
+    0xA3: 0xD3,
+    0xA4: 0xD4,
+    0xA5: 0xD5,
+    0xA6: 0xD6,
+    0xA7: 0xD7,
+    0xA8: 0xD8,
+    0xA9: 0xD9,
+    0xAA: 0xDA,
+    0xAB: 0xDB,
+    0xAC: 0xDC,
+    0xAD: 0xDD,
+    0xAE: 0xDE,
+    0xAF: 0xDF,
 
-
-    # --------------------------------------------------------
-    # А - Я
-    # UTF-8: D0 90 ... D0 AF
-    # --------------------------------------------------------
-
-    0x90: 0xC0,  # А
-    0x91: 0xC1,  # Б
-    0x92: 0xC2,  # В
-    0x93: 0xC3,  # Г
-    0x94: 0xC4,  # Д
-    0x95: 0xC5,  # Е
-    0x96: 0xC6,  # Ж
-    0x97: 0xC7,  # З
-    0x98: 0xC8,  # И
-    0x99: 0xC9,  # Й
-    0x9A: 0xCA,  # К
-    0x9B: 0xCB,  # Л
-    0x9C: 0xCC,  # М
-    0x9D: 0xCD,  # Н
-    0x9E: 0xCE,  # О
-    0x9F: 0xCF,  # П
-    0xA0: 0xD0,  # Р
-    0xA1: 0xD1,  # С
-    0xA2: 0xD2,  # Т
-    0xA3: 0xD3,  # У
-    0xA4: 0xD4,  # Ф
-    0xA5: 0xD5,  # Х
-    0xA6: 0xD6,  # Ц
-    0xA7: 0xD7,  # Ч
-    0xA8: 0xD8,  # Ш
-    0xA9: 0xD9,  # Щ
-    0xAA: 0xDA,  # Ъ
-    0xAB: 0xDB,  # Ы
-    0xAC: 0xDC,  # Ь
-    0xAD: 0xDD,  # Э
-    0xAE: 0xDE,  # Ю
-    0xAF: 0xDF,  # Я
-
-
-    # --------------------------------------------------------
-    # а - п
-    # UTF-8: D0 B0 ... D0 BF
-    # --------------------------------------------------------
-
-    0xB0: 0xE0,  # а
-    0xB1: 0xE1,  # б
-    0xB2: 0xE2,  # в
-    0xB3: 0xE3,  # г
-    0xB4: 0xE4,  # д
-    0xB5: 0xE5,  # е
-    0xB6: 0xE6,  # ж
-    0xB7: 0xE7,  # з
-    0xB8: 0xE8,  # и
-    0xB9: 0xE9,  # й
-    0xBA: 0xEA,  # к
-    0xBB: 0xEB,  # л
-    0xBC: 0xEC,  # м
-    0xBD: 0xED,  # н
-    0xBE: 0xEE,  # о
-    0xBF: 0xEF,  # п
+    # а-п
+    0xB0: 0xE0,
+    0xB1: 0xE1,
+    0xB2: 0xE2,
+    0xB3: 0xE3,
+    0xB4: 0xE4,
+    0xB5: 0xE5,
+    0xB6: 0xE6,
+    0xB7: 0xE7,
+    0xB8: 0xE8,
+    0xB9: 0xE9,
+    0xBA: 0xEA,
+    0xBB: 0xEB,
+    0xBC: 0xEC,
+    0xBD: 0xED,
+    0xBE: 0xEE,
+    0xBF: 0xEF,
 }
 
 
 # ============================================================
-# Найти массив GFXglyph
+# УДАЛЕНИЕ КОММЕНТАРИЕВ
 # ============================================================
 
-def find_glyph_array(text):
+def remove_comments(text):
+    """
+    Удаляет // и /* */ комментарии.
 
-    pattern = re.compile(
-        r'(const\s+GFXglyph\s+(\w+)\s*\[\]\s*PROGMEM\s*=\s*\{)'
-        r'(.*?)'
-        r'(\};)',
+    Нужно только для надёжного разбора массивов.
+    Оригинальный текст при этом не изменяется.
+    """
+
+    text = re.sub(
+        r"//.*?$",
+        "",
+        text,
+        flags=re.MULTILINE
+    )
+
+    text = re.sub(
+        r"/\*.*?\*/",
+        "",
+        text,
+        flags=re.DOTALL
+    )
+
+    return text
+
+
+# ============================================================
+# ПОИСК BITMAPS
+# ============================================================
+
+def find_bitmaps(text):
+
+    match = re.search(
+        r"const\s+uint8_t\s+(\w+Bitmaps)\s*\[\]\s*"
+        r"PROGMEM\s*=\s*\{(.*?)\};",
+        text,
         re.DOTALL
     )
 
-    match = pattern.search(text)
+    if not match:
+        raise RuntimeError(
+            "Не удалось найти массив Bitmaps[]."
+        )
+
+    name = match.group(1)
+    body = match.group(2)
+
+    clean_body = remove_comments(body)
+
+    tokens = re.findall(
+        r"0[xX][0-9A-Fa-f]+|\d+",
+        clean_body
+    )
+
+    values = [
+        int(token, 0)
+        for token in tokens
+    ]
+
+    return match, name, values
+
+
+# ============================================================
+# ПОИСК GLYPHS
+# ============================================================
+
+def find_glyphs(text):
+
+    match = re.search(
+        r"const\s+GFXglyph\s+(\w+Glyphs)\s*\[\]\s*"
+        r"PROGMEM\s*=\s*\{(.*?)\};",
+        text,
+        re.DOTALL
+    )
 
     if not match:
         raise RuntimeError(
             "Не удалось найти массив GFXglyph[]."
         )
 
-    return match
+    name = match.group(1)
+    body = match.group(2)
 
-
-# ============================================================
-# Разобрать GFXglyph[]
-# ============================================================
-
-def parse_glyphs(body):
+    clean_body = remove_comments(body)
 
     pattern = re.compile(
-        r'\{'
-        r'\s*([^{}]+?)'
-        r'\s*\}'
+        r"\{\s*"
+        r"(-?\d+)\s*,\s*"
+        r"(-?\d+)\s*,\s*"
+        r"(-?\d+)\s*,\s*"
+        r"(-?\d+)\s*,\s*"
+        r"(-?\d+)\s*,\s*"
+        r"(-?\d+)\s*"
+        r"\}"
     )
 
     glyphs = []
 
-    for match in pattern.finditer(body):
-
-        content = match.group(1)
-
-        # Удаляем комментарии
-        content = re.sub(
-            r'//.*',
-            '',
-            content
-        )
-
-        values = [
-            x.strip()
-            for x in content.split(',')
-            if x.strip()
-        ]
-
-        if len(values) != 6:
-            continue
+    for m in pattern.finditer(clean_body):
 
         glyphs.append(
-            match.group(0)
+            tuple(
+                int(x)
+                for x in m.groups()
+            )
         )
 
-    return glyphs
-
-
-# ============================================================
-# Найти first/last в GFXfont
-# ============================================================
-
-def find_font_range(text):
-
-    pattern = re.compile(
-        r'const\s+GFXfont\s+\w+'
-        r'.*?\{.*?'
-        r'(0x[0-9A-Fa-f]+|\d+)'
-        r'\s*,\s*'
-        r'(0x[0-9A-Fa-f]+|\d+)'
-        r'\s*,',
-        re.DOTALL
-    )
-
-    match = pattern.search(text)
-
-    if not match:
+    if not glyphs:
         raise RuntimeError(
-            "Не удалось найти структуру GFXfont."
+            "Не удалось разобрать GFXglyph[]."
         )
 
-    first = int(match.group(1), 0)
-    last  = int(match.group(2), 0)
-
-    return match, first, last
+    return match, name, glyphs
 
 
 # ============================================================
-# Изменить first / last
+# РАЗМЕР BITMAP GLYPH
 # ============================================================
 
-def modify_font_range(text, match):
+def glyph_bitmap_size(glyph):
 
-    new_text = (
-        text[:match.start(1)]
-        + f"0x{NEW_FIRST:02X}"
-        + text[match.end(1):match.start(2)]
-        + f"0x{NEW_LAST:02X}"
-        + text[match.end(2):]
-    )
+    """
+    В Adafruit GFX bitmap полностью bit-packed.
 
-    return new_text
+    Поэтому:
+
+        width * height
+
+    бит округляется вверх до целого байта.
+    """
+
+    _, width, height, _, _, _ = glyph
+
+    bits = width * height
+
+    return (bits + 7) // 8
 
 
 # ============================================================
-# Основная функция
+# ПОЛУЧЕНИЕ GLYPH
 # ============================================================
 
-def convert(input_file, output_file):
+def get_glyph(glyphs, first, code):
 
-    input_path = Path(input_file)
-    output_path = Path(output_file)
+    index = code - first
+
+    if index < 0 or index >= len(glyphs):
+
+        raise RuntimeError(
+            f"Glyph 0x{code:02X} отсутствует."
+        )
+
+    return glyphs[index]
+
+
+# ============================================================
+# ФОРМИРОВАНИЕ НОВОГО BITMAP
+# ============================================================
+
+def rebuild_bitmaps(
+    source_glyphs,
+    source_first,
+    source_bitmaps
+):
+
+    new_bitmaps = []
+    new_glyphs = []
 
     print()
-    print("Adafruit GFX Russian font converter")
-    print("-----------------------------------")
-    print(f"Input : {input_path}")
-    print(f"Output: {output_path}")
+    print("Rebuilding Bitmaps[]...")
+    print()
+
+    for new_code in range(
+        FIRST_CHAR,
+        LAST_CHAR + 1
+    ):
+
+        # ----------------------------------------------------
+        # Определяем исходный код
+        # ----------------------------------------------------
+
+        if new_code < 0x80:
+
+            source_code = new_code
+
+        else:
+
+            source_code = RUSSIAN_MAPPING.get(
+                new_code
+            )
+
+            if source_code is None:
+
+                raise RuntimeError(
+                    f"Нет mapping для "
+                    f"0x{new_code:02X}"
+                )
+
+        # ----------------------------------------------------
+        # Получаем исходный glyph
+        # ----------------------------------------------------
+
+        source_glyph = get_glyph(
+            source_glyphs,
+            source_first,
+            source_code
+        )
+
+        (
+            old_offset,
+            width,
+            height,
+            xadvance,
+            xoffset,
+            yoffset
+        ) = source_glyph
+
+        # ----------------------------------------------------
+        # Определяем размер bitmap
+        # ----------------------------------------------------
+
+        bitmap_size = glyph_bitmap_size(
+            source_glyph
+        )
+
+        old_end = (
+            old_offset
+            + bitmap_size
+        )
+
+        # ----------------------------------------------------
+        # Проверяем исходный bitmap
+        # ----------------------------------------------------
+
+        if old_offset < 0:
+
+            raise RuntimeError(
+                f"Glyph 0x{source_code:02X} "
+                f"имеет отрицательный bitmapOffset."
+            )
+
+        if old_end > len(source_bitmaps):
+
+            raise RuntimeError(
+                f"Glyph 0x{source_code:02X} "
+                f"выходит за пределы Bitmaps[]: "
+                f"offset={old_offset}, "
+                f"size={bitmap_size}, "
+                f"end={old_end}, "
+                f"bitmap size={len(source_bitmaps)}"
+            )
+
+        # ----------------------------------------------------
+        # Копируем bitmap
+        # ----------------------------------------------------
+
+        bitmap = source_bitmaps[
+            old_offset:old_end
+        ]
+
+        # ----------------------------------------------------
+        # Новый offset
+        # ----------------------------------------------------
+
+        new_offset = len(
+            new_bitmaps
+        )
+
+        # ----------------------------------------------------
+        # Добавляем bitmap в новый массив
+        # ----------------------------------------------------
+
+        new_bitmaps.extend(
+            bitmap
+        )
+
+        # ----------------------------------------------------
+        # Создаём новый glyph
+        #
+        # Все параметры кроме bitmapOffset
+        # остаются неизменными.
+        # ----------------------------------------------------
+
+        new_glyph = (
+            new_offset,
+            width,
+            height,
+            xadvance,
+            xoffset,
+            yoffset
+        )
+
+        new_glyphs.append(
+            new_glyph
+        )
+
+        print(
+            f"0x{new_code:02X} "
+            f"<- 0x{source_code:02X} : "
+            f"offset "
+            f"{old_offset} -> {new_offset}, "
+            f"{bitmap_size} bytes"
+        )
+
+    return new_glyphs, new_bitmaps
+
+
+# ============================================================
+# ФОРМАТИРОВАНИЕ BITMAPS
+# ============================================================
+
+def format_bitmaps(values):
+
+    lines = []
+
+    for i in range(
+        0,
+        len(values),
+        12
+    ):
+
+        chunk = values[
+            i:i + 12
+        ]
+
+        lines.append(
+            "    "
+            + ", ".join(
+                f"0x{x:02X}"
+                for x in chunk
+            )
+            + ","
+        )
+
+    return "\n".join(lines)
+
+
+# ============================================================
+# ФОРМАТИРОВАНИЕ GLYPHS
+# ============================================================
+
+def format_glyphs(glyphs):
+
+    lines = []
+
+    for glyph in glyphs:
+
+        lines.append(
+            "    {"
+            + ", ".join(
+                str(x)
+                for x in glyph
+            )
+            + "},"
+        )
+
+    if lines:
+
+        lines[-1] = lines[-1].rstrip(",")
+
+    return "\n".join(lines)
+
+
+# ============================================================
+# ЗАМЕНА МАССИВА
+# ============================================================
+
+def replace_array(
+    text,
+    pattern,
+    new_body
+):
+
+    result = re.sub(
+        pattern,
+        lambda m:
+            m.group(1)
+            + "\n"
+            + new_body
+            + "\n"
+            + m.group(2),
+        text,
+        count=1,
+        flags=re.DOTALL
+    )
+
+    if result == text:
+
+        raise RuntimeError(
+            "Не удалось заменить массив."
+        )
+
+    return result
+
+
+# ============================================================
+# ИЗМЕНЕНИЕ GFXfont FIRST/LAST
+# ============================================================
+
+def replace_font_range(
+    text
+):
+
+    pattern = (
+        r"(const\s+GFXfont\s+\w+"
+        r"\s+PROGMEM\s*=\s*\{"
+        r".*?"
+        r"\(GFXglyph\s*\*\)\w+\s*,"
+        r"\s*)"
+        r"(0x[0-9A-Fa-f]+|\d+)"
+        r"\s*,\s*"
+        r"(0x[0-9A-Fa-f]+|\d+)"
+        r"\s*,"
+    )
+
+    result = re.sub(
+        pattern,
+        lambda m:
+            m.group(1)
+            + f"0x{FIRST_CHAR:02X}, "
+            + f"0x{LAST_CHAR:02X},",
+        text,
+        count=1,
+        flags=re.DOTALL
+    )
+
+    if result == text:
+
+        raise RuntimeError(
+            "Не удалось изменить диапазон GFXfont."
+        )
+
+    return result
+
+
+# ============================================================
+# ОСНОВНАЯ ФУНКЦИЯ
+# ============================================================
+
+def convert(
+    input_file,
+    output_file
+):
+
+    input_path = Path(
+        input_file
+    )
+
+    output_path = Path(
+        output_file
+    )
+
+    print()
+    print(
+        "Adafruit GFX Russian font converter"
+    )
+    print(
+        "==================================="
+    )
+    print()
+
+    print(
+        f"Input : {input_path}"
+    )
+
+    print(
+        f"Output: {output_path}"
+    )
+
     print()
 
     # --------------------------------------------------------
-    # Читаем файл как Latin-1.
+    # Читаем исходный файл
     #
-    # Это позволяет безопасно работать с .h, в котором
-    # конвертер записал байты 0x80-0xFF непосредственно
-    # в комментарии.
+    # latin-1 позволяет читать любой байтовый файл без
+    # ошибки UTF-8.
     # --------------------------------------------------------
 
     text = input_path.read_text(
@@ -255,219 +589,278 @@ def convert(input_file, output_file):
     )
 
     # --------------------------------------------------------
-    # Находим GFXglyph[]
+    # Bitmaps
     # --------------------------------------------------------
 
-    glyph_match = find_glyph_array(text)
+    (
+        bitmap_match,
+        bitmap_name,
+        source_bitmaps
+    ) = find_bitmaps(text)
 
-    glyph_body = glyph_match.group(3)
+    print(
+        f"Bitmap array: {bitmap_name}"
+    )
 
-    old_glyphs = parse_glyphs(glyph_body)
+    print(
+        f"Bitmap bytes: "
+        f"{len(source_bitmaps)}"
+    )
 
-    if not old_glyphs:
-        raise RuntimeError(
-            "Не удалось разобрать GFXglyph[]."
+    # --------------------------------------------------------
+    # Glyphs
+    # --------------------------------------------------------
+
+    (
+        glyph_match,
+        glyph_name,
+        source_glyphs
+    ) = find_glyphs(text)
+
+    print(
+        f"Glyph array : {glyph_name}"
+    )
+
+    print(
+        f"Glyph count : "
+        f"{len(source_glyphs)}"
+    )
+
+    source_first = 0x20
+
+    source_last = (
+        source_first
+        + len(source_glyphs)
+        - 1
+    )
+
+    print(
+        f"Source range: "
+        f"0x{source_first:02X} - "
+        f"0x{source_last:02X}"
+    )
+
+    # --------------------------------------------------------
+    # Проверяем исходный font
+    # --------------------------------------------------------
+
+    print()
+    print(
+        "Checking source glyphs..."
+    )
+    print()
+
+    bad_glyphs = []
+
+    for code in range(
+        source_first,
+        source_last + 1
+    ):
+
+        glyph = get_glyph(
+            source_glyphs,
+            source_first,
+            code
         )
 
-    print(
-        f"Найдено glyph'ов: {len(old_glyphs)}"
-    )
-
-    # --------------------------------------------------------
-    # Определяем first/last исходного шрифта
-    # --------------------------------------------------------
-
-    font_match, old_first, old_last = find_font_range(text)
-
-    print(
-        f"Исходный диапазон: "
-        f"0x{old_first:02X} - 0x{old_last:02X}"
-    )
-
-    # --------------------------------------------------------
-    # Проверяем, что исходный шрифт содержит все нужные
-    # исходные glyph'ы.
-    # --------------------------------------------------------
-
-    def old_index(code):
-
-        index = code - old_first
-
-        if index < 0 or index >= len(old_glyphs):
-
-            raise RuntimeError(
-                f"В исходном шрифте отсутствует "
-                f"glyph 0x{code:02X}."
-            )
-
-        return index
-
-    # --------------------------------------------------------
-    # Создаём НОВЫЙ массив только 0x20...0xBF.
-    #
-    # Это принципиально:
-    #
-    # всё после 0xBF физически исчезнет из файла.
-    # --------------------------------------------------------
-
-    new_glyphs = []
-
-    for code in range(NEW_FIRST, NEW_LAST + 1):
-
-        # Обычные символы ASCII и прочее,
-        # которые уже находились на тех же позициях.
-
-        if code not in RUSSIAN_MAPPING:
-
-            index = old_index(code)
-
-            new_glyphs.append(
-                old_glyphs[index]
-            )
-
-        else:
-
-            # Русская буква:
-            # берём glyph из старой CP1251-позиции.
-
-            source_code = RUSSIAN_MAPPING[code]
-
-            index = old_index(source_code)
-
-            new_glyphs.append(
-                old_glyphs[index]
-            )
-
-    # --------------------------------------------------------
-    # Проверяем количество
-    # --------------------------------------------------------
-
-    expected_count = NEW_LAST - NEW_FIRST + 1
-
-    if len(new_glyphs) != expected_count:
-
-        raise RuntimeError(
-            f"Ошибка формирования массива: "
-            f"получено {len(new_glyphs)}, "
-            f"ожидалось {expected_count}."
+        offset = glyph[0]
+        size = glyph_bitmap_size(
+            glyph
         )
 
-    print(
-        f"Новый диапазон: "
-        f"0x{NEW_FIRST:02X} - 0x{NEW_LAST:02X}"
-    )
+        end = offset + size
 
-    print(
-        f"Новых glyph'ов: {len(new_glyphs)}"
-    )
+        if end > len(source_bitmaps):
 
-    # --------------------------------------------------------
-    # Формируем новый GFXglyph[]
-    # --------------------------------------------------------
+            bad_glyphs.append(
+                (
+                    code,
+                    offset,
+                    size,
+                    end,
+                    len(source_bitmaps)
+                )
+            )
 
-    new_body = "\n"
+            print(
+                f"WARNING: "
+                f"0x{code:02X}: "
+                f"offset={offset}, "
+                f"size={size}, "
+                f"end={end}, "
+                f"bitmap size="
+                f"{len(source_bitmaps)}"
+            )
 
-    for glyph in new_glyphs:
+    if not bad_glyphs:
 
-        new_body += (
-            "    "
-            + glyph
-            + ",\n"
+        print(
+            "All source glyphs are valid."
         )
 
-    new_body += " "
-
     # --------------------------------------------------------
-    # Заменяем старый массив новым
+    # Перестраиваем glyphs + Bitmaps
     # --------------------------------------------------------
 
-    body_start = glyph_match.start(3)
-    body_end   = glyph_match.end(3)
-
-    new_text = (
-        text[:body_start]
-        + new_body
-        + text[body_end:]
+    (
+        new_glyphs,
+        new_bitmaps
+    ) = rebuild_bitmaps(
+        source_glyphs,
+        source_first,
+        source_bitmaps
     )
 
     # --------------------------------------------------------
-    # Меняем first/last
+    # Форматируем массивы
     # --------------------------------------------------------
 
-    # После замены массива позиции в тексте могли измениться,
-    # поэтому ищем GFXfont заново.
+    new_bitmap_body = format_bitmaps(
+        new_bitmaps
+    )
 
-    font_match, _, _ = find_font_range(new_text)
+    new_glyph_body = format_glyphs(
+        new_glyphs
+    )
 
-    new_text = modify_font_range(
+    # --------------------------------------------------------
+    # Заменяем Bitmaps[]
+    # --------------------------------------------------------
+
+    bitmap_pattern = (
+        rf"(const\s+uint8_t\s+"
+        rf"{re.escape(bitmap_name)}"
+        rf"\s*\[\]\s*PROGMEM\s*=\s*\{{)"
+        rf".*?"
+        rf"(\}};)"
+    )
+
+    new_text = replace_array(
+        text,
+        bitmap_pattern,
+        new_bitmap_body
+    )
+
+    # --------------------------------------------------------
+    # Заменяем Glyphs[]
+    # --------------------------------------------------------
+
+    glyph_pattern = (
+        rf"(const\s+GFXglyph\s+"
+        rf"{re.escape(glyph_name)}"
+        rf"\s*\[\]\s*PROGMEM\s*=\s*\{{)"
+        rf".*?"
+        rf"(\}};)"
+    )
+
+    new_text = replace_array(
         new_text,
-        font_match
+        glyph_pattern,
+        new_glyph_body
     )
 
     # --------------------------------------------------------
-    # Сохраняем UTF-8
+    # Устанавливаем first = 0x20
+    # и last = 0xBF
+    # --------------------------------------------------------
+
+    new_text = replace_font_range(
+        new_text
+    )
+
+    # --------------------------------------------------------
+    # Сохраняем
     # --------------------------------------------------------
 
     output_path.write_text(
         new_text,
-        encoding="utf-8"
+        encoding="latin-1"
     )
 
     # --------------------------------------------------------
-    # Информация
+    # Проверка результата
     # --------------------------------------------------------
 
     print()
-    print("Готово!")
+    print(
+        "==================================="
+    )
+
+    print(
+        "RESULT"
+    )
+
+    print(
+        "==================================="
+    )
+
     print()
+
     print(
-        "Кириллица размещена по второму байту UTF-8:"
+        f"Glyph range : "
+        f"0x{FIRST_CHAR:02X} - "
+        f"0x{LAST_CHAR:02X}"
     )
+
     print(
-        "  0x80-0x8F -> р-я"
+        f"Glyph count : "
+        f"{len(new_glyphs)}"
     )
+
     print(
-        "  0x90-0xAF -> А-Я"
+        f"Old Bitmaps : "
+        f"{len(source_bitmaps)} bytes"
     )
+
     print(
-        "  0xB0-0xBF -> а-п"
+        f"New Bitmaps : "
+        f"{len(new_bitmaps)} bytes"
     )
+
+    print(
+        f"Saved       : "
+        f"{len(source_bitmaps) - len(new_bitmaps)} bytes"
+    )
+
     print()
+
     print(
-        "Glyph'ы после 0xBF удалены."
+        "ГОТОВО"
     )
-    print(
-        "Bitmap'ы не изменялись."
-    )
-    print(
-        "bitmapOffset каждого glyph'а сохранён."
-    )
+
     print()
 
 
 # ============================================================
-# Запуск
+# MAIN
 # ============================================================
 
 def main():
 
     if len(sys.argv) < 2:
 
-        print()
         print(
             "Использование:"
         )
-        print(
-            "  python gfx_rus_converter.py input.h"
-        )
+
         print()
+
+        print(
+            "  python gfx_font_rus_converter.py input.h"
+        )
+
+        print()
+
         print(
             "Или:"
         )
-        print(
-            "  python gfx_rus_converter.py input.h output.h"
-        )
+
         print()
+
+        print(
+            "  python gfx_font_rus_converter.py "
+            "input.h output.h"
+        )
 
         return
 
@@ -479,7 +872,9 @@ def main():
 
     else:
 
-        input_path = Path(input_file)
+        input_path = Path(
+            input_file
+        )
 
         output_file = (
             input_path.stem
@@ -497,12 +892,17 @@ def main():
     except Exception as error:
 
         print()
-        print("ОШИБКА:")
-        print(error)
+        print(
+            "ОШИБКА:"
+        )
+        print(
+            error
+        )
         print()
 
         sys.exit(1)
 
 
 if __name__ == "__main__":
+
     main()
